@@ -1,12 +1,14 @@
 using Microsoft.OpenApi.Models;
 using Pathy.API.Endpoints;
+using Pathy.Infrastructure;
 
 namespace Pathy.API.Configurations;
 
 public static class Extensions
 {
-    public static IServiceCollection AddServices(this IServiceCollection services)
+    public static IServiceCollection AddDependencyInjection(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddInfrastructure(configuration);
         services.AddEndpointsApiExplorer();
         services.AddSwagger();
         return services;
