@@ -1,0 +1,66 @@
+---
+description: Product vision for the URL shortener — actors, use cases, and business rules
+alwaysApply: true
+---
+
+# Product Vision
+
+A URL shortening service focused on reliability, analytics, and scale.
+It's not just "long URL becomes short URL" — it's a platform that companies would use for
+marketing campaigns, social media sharing, and click tracking.
+
+## Actors
+
+- **Anonymous user**: shortens URLs without registration, no history, more aggressive rate limiting.
+- **Authenticated user**: manages their own links, views analytics, custom slugs,
+  expiration, deactivation.
+- **Administrator**: moderates reported links, views general metrics, bans users,
+  deactivates malicious links.
+- **External system (API Key)**: programmatic integrations (e.g., email marketing tool
+  shortening links in bulk).
+
+## Use cases and business rules
+
+### Shorten URL
+- Validate well-formed URL that resolves; block localhost/private IP (SSRF).
+- Anonymous → more aggressive rate limiting.
+- Custom slug only for authenticated users; validate uniqueness.
+- Check URL against blocklist of known malicious URLs.
+- Never return data from other users or internal infrastructure details.
+
+### Redirect
+- Expired/deactivated link → friendly error page (not generic 404).
+- Password-protected link → request password before redirecting.
+- Click is tracked **asynchronously** (queue), never blocks the redirect.
+- Never expose the original URL in the response body before redirect.
+
+### View analytics
+- Only the owner (or admin) can view — always validate ownership.
+- Returns: total clicks, time series, approximate country/city, device,
+  referrer.
+- **Never** return personally identifiable visitor data (e.g., full IP) —
+  comply with LGPD/GDPR.
+
+### Manage my links
+- List (paginated, filter by status/date).
+- Edit destination/expiration → log audit trail (changes link semantics).
+- Soft delete (deactivates, click history remains) vs hard delete
+  (removes everything — "right to be forgotten").
+- Validate ownership in every operation, even if ID is guessed.
+
+### Report abuse
+- Any visitor can report (slug + reason).
+- Response only confirms receipt, doesn't reveal next steps (prevents gaming).
+
+### Moderate (admin)
+- View report queue, deactivate link, ban user.
+- Every moderation action generates audit log (who, when, why).
+
+## Non-functional requirements
+
+- **Idempotency**: same URL + same user → ideally returns the same link.
+- **Rate limiting**: by IP (anonymous), by API key (integrations).
+- **Eventual consistency**: click counter doesn't need to be exact in real time;
+  this is an architectural decision documented in the README.
+- **Security**: open redirect prevention, SSRF validation, automatic expiration
+  of unused links, LGPD/GDPR compliance in analytics collection.

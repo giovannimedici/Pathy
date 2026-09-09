@@ -1,0 +1,34 @@
+---
+description: Clean Architecture conventions for the .NET backend of the URL shortener
+globs:
+  - "src/**/*.cs"
+  - "**/*.csproj"
+alwaysApply: false
+---
+
+# Architecture
+
+The backend follows Clean Architecture with 4 layers, each in its own project:
+
+- **Domain**: entities, value objects, pure business rules. No dependencies on
+  any other layer, no references to EF Core, ASP.NET, or AWS SDK.
+- **Application**: use cases, repository/external service interfaces, input/output
+  DTOs. Depends only on Domain.
+- **Infrastructure**: concrete implementations (EF Core, Postgres, SQS, Secrets
+  Manager, external integrations). Depends on Application (implements interfaces
+  defined there).
+- **Api**: controllers/endpoints, middleware, DI configuration, authentication.
+  Depends on Application and Infrastructure only for composition (Program.cs).
+
+## Dependency rules
+- Domain never depends on anything.
+- Application never depends on Infrastructure or Api.
+- New business rules go into Domain or Application, never directly in the
+  controller.
+
+## Project-specific patterns
+- API errors follow RFC 7807 Problem Details (don't return raw exceptions).
+- Asynchronous processing (e.g., click tracking) always via queue (local or
+  cloud SQS), never synchronously within the redirect request.
+- All user input validated at the boundary (Application or Api), Domain assumes
+  already validated data.
