@@ -61,6 +61,7 @@ public static class DependencyInjection
     private static IServiceCollection AddUseCases(this IServiceCollection services)
     {
         services.AddScoped<CreateShortLinkUseCase>();
+        services.AddScoped<GetShortLinkUseCase>();
         return services;
     }
 }

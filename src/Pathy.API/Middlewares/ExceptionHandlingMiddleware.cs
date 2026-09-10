@@ -46,6 +46,20 @@ public class ExceptionHandlingMiddleware
                 Type = "https://tools.ietf.org/html/rfc7231#section-6.5.8"
             });
         }
+        catch (GoneException ex)
+        {
+            _logger.LogInformation(ex,
+                "Resource no longer available. Message={Message} Path={Path}",
+                ex.Message, context.Request.Path);
+            context.Response.StatusCode = StatusCodes.Status410Gone;
+            await context.Response.WriteAsJsonAsync(new ProblemDetails
+            {
+                Status = 410,
+                Title = "Gone",
+                Detail = ex.Message,
+                Type = "https://tools.ietf.org/html/rfc7231#section-6.5.9"
+            });
+        }
         catch (DomainException ex)
         {
             _logger.LogWarning(ex,

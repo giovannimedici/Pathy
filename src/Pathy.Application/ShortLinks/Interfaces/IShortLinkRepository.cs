@@ -17,6 +17,24 @@ public interface IShortLinkRepository
     Task<ShortLink?> FindByUserAndUrlAsync(Guid? userId, string originalUrl, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Finds a short link by slug.
+    /// Only returns active, non-expired links. Expired or deactivated links are not returned.
+    /// </summary>
+    /// <param name="slug">Slug to search for.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>ShortLink if found and valid, null otherwise.</returns>
+    Task<ShortLink?> FindBySlugAsync(string slug, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds a short link by slug without any status or expiration filters.
+    /// Used internally to differentiate between not found, expired, and inactive links.
+    /// </summary>
+    /// <param name="slug">Slug to search for.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>ShortLink if found, null otherwise.</returns>
+    Task<ShortLink?> FindBySlugWithoutFiltersAsync(string slug, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Checks if a slug already exists.
     /// </summary>
     /// <param name="slug">Slug to check.</param>

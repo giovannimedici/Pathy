@@ -28,6 +28,18 @@ public static class ShortLinkEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+
+        // GET /{slug} endpoint - redirect to original URL
+        app.MapGet("/{slug}", GetShortLinkAsync)
+            .WithName("GetShortLink")
+            .WithTags("ShortLinks")
+            .WithSummary("Redirect to original URL")
+            .WithDescription("Redirects to the original URL. Returns 401 if password is required, 404 if not found or deactivated, 410 if expired.")
+            .Produces(StatusCodes.Status302Found)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status410Gone)
+            .WithOpenApi();
     }
 
     private static async Task<IResult> CreateShortLinkAsync(
@@ -40,5 +52,26 @@ public static class ShortLinkEndpoints
         return isNew
             ? Results.Created($"/{response.Slug}", response)
             : Results.Ok(response);
+    }
+
+    private static async Task<IResult> GetShortLinkAsync(
+        string slug,
+        GetShortLinkUseCase useCase,
+        CancellationToken cancellationToken)
+    {
+        var response = await useCase.ExecuteAsync(slug, cancellationToken);
+
+        // If password is required, return 401 Unauthorized
+        if (response.RequiresPassword)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status401Unauthorized,
+                title: "Password Required",
+                detail: "This link is password-protected. Please provide a valid password to access it.",
+                type: "https://tools.ietf.org/html/rfc7235#section-3.1");
+        }
+
+        // Otherwise, redirect to the original URL
+        return Results.Redirect(response.OriginalUrl!);
     }
 }
