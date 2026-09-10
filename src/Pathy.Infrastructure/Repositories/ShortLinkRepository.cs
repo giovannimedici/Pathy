@@ -28,6 +28,29 @@ public sealed class ShortLinkRepository : IShortLinkRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    public async Task<ShortLink?> FindBySlugAsync(
+        string slug,
+        CancellationToken cancellationToken = default)
+    {
+        var now = DateTimeOffset.UtcNow;
+        
+        return await _context.ShortLinks
+            .Where(link => 
+                link.Slug == slug &&
+                link.Status == Domain.Enums.LinkStatus.Active &&
+                (link.ExpiresAt == null || link.ExpiresAt > now))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<ShortLink?> FindBySlugWithoutFiltersAsync(
+        string slug,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.ShortLinks
+            .Where(link => link.Slug == slug)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task<bool> SlugExistsAsync(
         string slug,
         CancellationToken cancellationToken = default)
