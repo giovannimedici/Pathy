@@ -18,3 +18,6 @@ var app = builder.Build();
 app.ConfigureApp();
 
 app.Run();
+
+// Make Program accessible to integration tests
+public partial class Program { }

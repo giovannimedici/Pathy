@@ -1,6 +1,0 @@
-@Pathy.API_HostAddress = http://localhost:5041
-
-GET {{Pathy.API_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

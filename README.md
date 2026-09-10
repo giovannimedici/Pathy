@@ -44,3 +44,82 @@ All URLs are validated before a link is created:
 dotnet build
 dotnet test
 ```
+
+### Database migrations
+
+Make sure to have PostgreSQL running and configure the connection string via environment variable:
+
+```bash
+export ConnectionStrings__DefaultConnection="Host=localhost;Database=pathy;Username=your_user;Password=your_password"
+cd src/Pathy.Infrastructure
+dotnet ef database update --startup-project ../Pathy.API
+```
+
+## API Endpoints
+
+### POST /links
+
+Creates a new short link. Anonymous users can create basic links, while authenticated users have access to advanced features.
+
+**Request body:**
+
+```json
+{
+  "url": "https://example.com/very/long/url",
+  "customSlug": "myslug",     // optional, authenticated only
+  "expiresAt": "2026-12-31T23:59:59Z",  // optional, authenticated only
+  "password": "secret123"      // optional, authenticated only
+}
+```
+
+**Success responses:**
+
+- **201 Created** — New link created
+- **200 OK** — Existing link returned (idempotency for authenticated users)
+
+```json
+{
+  "slug": "abc123",
+  "shortUrl": "https://your-domain.com/abc123",
+  "originalUrl": "https://example.com/very/long/url",
+  "createdAt": "2026-09-09T11:00:00Z",
+  "expiresAt": null,
+  "isPasswordProtected": false
+}
+```
+
+**Error responses:**
+
+- **400 Bad Request** — Malformed request
+- **401 Unauthorized** — Advanced features require authentication
+- **409 Conflict** — Custom slug already in use
+- **422 Unprocessable Entity** — Invalid URL (e.g., localhost, private IPs)
+
+**Business rules:**
+
+1. **Idempotency:** If an authenticated user already created a link for the same URL, the existing link is returned (200 OK). Anonymous users always get a new link (201 Created).
+
+2. **Custom slugs:** Only authenticated users can specify custom slugs. Must be 6-8 Base62 characters and unique.
+
+3. **Advanced features:** Expiration dates and password protection are only available for authenticated users.
+
+4. **URL validation:** All URLs are validated against SSRF attacks (localhost and private IPs are blocked).
+
+**Examples:**
+
+```bash
+# Anonymous user - basic link
+curl -X POST https://your-domain.com/links \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com/page"}'
+
+# Authenticated user - custom slug with expiration
+curl -X POST https://your-domain.com/links \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "url": "https://example.com/page",
+    "customSlug": "promo24",
+    "expiresAt": "2026-12-31T23:59:59Z"
+  }'
+```

@@ -8,6 +8,7 @@ public static class Extensions
 {
     public static IServiceCollection AddDependencyInjection(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddHttpContextAccessor();
         services.AddInfrastructure(configuration);
         services.AddEndpointsApiExplorer();
         services.AddSwagger();
@@ -43,7 +44,7 @@ public static class Extensions
 
     public static WebApplication MapEndpoints(this WebApplication app)
     {
-        app.MapWeatherForecastEndpoint();
+        app.MapShortLinkEndpoints();
         return app;
     }
 }

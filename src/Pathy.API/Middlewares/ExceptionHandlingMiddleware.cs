@@ -18,6 +18,34 @@ public class ExceptionHandlingMiddleware
         {
             await _next(context);
         }
+        catch (UnauthorizedException ex)
+        {
+            _logger.LogWarning(ex,
+                "Unauthorized operation. Message={Message} Path={Path}",
+                ex.Message, context.Request.Path);
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsJsonAsync(new ProblemDetails
+            {
+                Status = 401,
+                Title = "Unauthorized",
+                Detail = ex.Message,
+                Type = "https://tools.ietf.org/html/rfc7235#section-3.1"
+            });
+        }
+        catch (ConflictException ex)
+        {
+            _logger.LogWarning(ex,
+                "Resource conflict. Message={Message} Path={Path}",
+                ex.Message, context.Request.Path);
+            context.Response.StatusCode = StatusCodes.Status409Conflict;
+            await context.Response.WriteAsJsonAsync(new ProblemDetails
+            {
+                Status = 409,
+                Title = "Conflict",
+                Detail = ex.Message,
+                Type = "https://tools.ietf.org/html/rfc7231#section-6.5.8"
+            });
+        }
         catch (DomainException ex)
         {
             _logger.LogWarning(ex,
@@ -28,7 +56,8 @@ public class ExceptionHandlingMiddleware
             {
                 Status = 422,
                 Title = "Domain rule violation",
-                Detail = ex.Message
+                Detail = ex.Message,
+                Type = "https://tools.ietf.org/html/rfc4918#section-11.2"
             });
         }
         catch (NotFoundException ex)
@@ -38,7 +67,8 @@ public class ExceptionHandlingMiddleware
             {
                 Status = 404,
                 Title = "Resource not found",
-                Detail = ex.Message
+                Detail = ex.Message,
+                Type = "https://tools.ietf.org/html/rfc7231#section-6.5.4"
             });
         }
         catch (Exception ex)
@@ -51,6 +81,7 @@ public class ExceptionHandlingMiddleware
             {
                 Status = 500,
                 Title = "Internal Server Error",
+                Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1"
             });
         }
     }
