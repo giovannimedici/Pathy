@@ -41,6 +41,13 @@ public class ShortLinkConfiguration : IEntityTypeConfiguration<ShortLink>
             .HasConversion<string>()
             .HasMaxLength(20);
 
+        builder.Property(x => x.UserId)
+            .HasColumnName("user_id");
+
+        builder.Property(x => x.PasswordHash)
+            .HasColumnName("password_hash")
+            .HasMaxLength(256);
+
         // Unique index on slug for fast lookups during redirect
         builder.HasIndex(x => x.Slug)
             .IsUnique()
@@ -49,5 +56,9 @@ public class ShortLinkConfiguration : IEntityTypeConfiguration<ShortLink>
         // Index on status for filtering active links
         builder.HasIndex(x => x.Status)
             .HasDatabaseName("ix_short_links_status");
+
+        // Index on user_id and original_url for idempotency check
+        builder.HasIndex(x => new { x.UserId, x.OriginalUrl })
+            .HasDatabaseName("ix_short_links_user_url");
     }
 }

@@ -136,7 +136,7 @@ public class ShortLinkTests
     {
         var expiresAt = DateTimeOffset.UtcNow.AddDays(7);
 
-        var link = ShortLink.Create("https://example.com/page", expiresAt);
+        var link = ShortLink.Create("https://example.com/page", userId: null, customSlug: null, expiresAt: expiresAt);
 
         Assert.Equal(expiresAt, link.ExpiresAt);
     }
@@ -152,6 +152,6 @@ public class ShortLinkTests
     {
         var expiresAt = DateTimeOffset.UtcNow.AddMinutes(-1);
 
-        Assert.Throws<DomainException>(() => ShortLink.Create("https://example.com", expiresAt));
+        Assert.Throws<DomainException>(() => ShortLink.Create("https://example.com", userId: null, customSlug: null, expiresAt: expiresAt));
     }
 }

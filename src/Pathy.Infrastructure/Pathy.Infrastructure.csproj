@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Pathy.Domain\Pathy.Domain.csproj" />
+    <ProjectReference Include="..\Pathy.Application\Pathy.Application.csproj" />
   </ItemGroup>
 
 </Project>
