@@ -51,6 +51,10 @@ than `System.Random`.
 Authenticated users can also choose a **custom slug** using the same Base62 alphabet and
 length constraints (6–8 characters, must be unique).
 
+**Reserved slugs:** Certain slugs are reserved because they collide with API routes and
+cannot be used: `links`, `auth`, `swagger`, `api`, `health`, `metrics`. The validation is
+case-insensitive, so `LINKS` or `Links` are also blocked.
+
 ## URL validation
 
 All URLs are validated before a link is created:

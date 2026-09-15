@@ -172,6 +172,28 @@ public class CreateShortLinkEndpointTests : IClassFixture<PathyWebApplicationFac
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
     }
 
+    [Theory]
+    [InlineData("links")]
+    [InlineData("auth")]
+    [InlineData("swagger")]
+    public async Task CreateShortLink_WithReservedCustomSlug_ReturnsUnauthorizedForAnonymous(string reservedSlug)
+    {
+        // Arrange
+        var request = new CreateShortLinkRequest
+        {
+            Url = "https://example.com/page",
+            CustomSlug = reservedSlug
+        };
+
+        // Act - Anonymous user with custom slug (any slug) will fail with 401
+        var response = await _client.PostAsJsonAsync("/links", request);
+
+        // Assert - Should fail with 401 because custom slugs require authentication
+        // Note: When authentication is implemented, authenticated users with reserved slugs
+        // should fail with 422 instead
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
     private async Task ClearDatabase()
     {
         using var scope = _factory.Services.CreateScope();
