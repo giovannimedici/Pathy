@@ -67,4 +67,32 @@ public sealed class ShortLink
     }
 
     public bool IsPasswordProtected => !string.IsNullOrEmpty(PasswordHash);
+
+    /// <summary>
+    /// Updates the destination URL of the link.
+    /// This changes the link semantics and should be audited.
+    /// </summary>
+    /// <param name="newUrl">New destination URL.</param>
+    /// <exception cref="DomainException">Thrown if URL is invalid.</exception>
+    public void UpdateDestinationUrl(string newUrl)
+    {
+        UrlRules.Validate(newUrl);
+        OriginalUrl = newUrl;
+    }
+
+    /// <summary>
+    /// Updates the expiration date of the link.
+    /// </summary>
+    /// <param name="newExpiresAt">New expiration date (null to remove expiration).</param>
+    /// <exception cref="DomainException">Thrown if expiration date is in the past.</exception>
+    public void UpdateExpiresAt(DateTimeOffset? newExpiresAt)
+    {
+        if (newExpiresAt.HasValue && newExpiresAt.Value <= DateTimeOffset.UtcNow)
+        {
+            throw new DomainException("Expiration date must be in the future.");
+        }
+        ExpiresAt = newExpiresAt;
+    }
+
+    // TODO: When soft delete is implemented, add validation to prevent editing inactive links
 }

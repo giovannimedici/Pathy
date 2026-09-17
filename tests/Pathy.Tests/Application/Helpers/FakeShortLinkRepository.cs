@@ -56,4 +56,56 @@ internal sealed class FakeShortLinkRepository : IShortLinkRepository
 
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
         Task.CompletedTask;
+
+    public Task<ShortLink?> FindByIdAndUserAsync(
+        Guid id,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var link = _links.FirstOrDefault(l => l.Id == id && l.UserId == userId);
+        return Task.FromResult(link);
+    }
+
+    public Task<(List<ShortLink> Items, int TotalCount)> ListByUserAsync(
+        Guid userId,
+        int page,
+        int pageSize,
+        LinkStatus? status,
+        DateTimeOffset? createdFrom,
+        DateTimeOffset? createdTo,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _links.Where(l => l.UserId == userId);
+
+        if (status.HasValue)
+        {
+            query = query.Where(l => l.Status == status.Value);
+        }
+
+        if (createdFrom.HasValue)
+        {
+            query = query.Where(l => l.CreatedAt >= createdFrom.Value);
+        }
+
+        if (createdTo.HasValue)
+        {
+            var endOfDay = createdTo.Value.Date.AddDays(1);
+            query = query.Where(l => l.CreatedAt < endOfDay);
+        }
+
+        var totalCount = query.Count();
+        var items = query
+            .OrderByDescending(l => l.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        return Task.FromResult((items, totalCount));
+    }
+
+    public Task UpdateAsync(ShortLink shortLink, CancellationToken cancellationToken = default)
+    {
+        // No need to do anything in memory, changes are already reflected
+        return Task.CompletedTask;
+    }
 }

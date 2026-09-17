@@ -54,4 +54,40 @@ public interface IShortLinkRepository
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds a link by ID and validates ownership.
+    /// </summary>
+    /// <param name="id">Link ID.</param>
+    /// <param name="userId">User ID for ownership validation.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>ShortLink if found and owned by user, null otherwise.</returns>
+    Task<ShortLink?> FindByIdAndUserAsync(Guid id, Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns paginated list of links for a specific user with optional filters.
+    /// </summary>
+    /// <param name="userId">User ID.</param>
+    /// <param name="page">Page number (1-indexed).</param>
+    /// <param name="pageSize">Number of items per page.</param>
+    /// <param name="status">Optional filter by link status.</param>
+    /// <param name="createdFrom">Optional filter by creation date from (inclusive).</param>
+    /// <param name="createdTo">Optional filter by creation date to (inclusive).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Tuple with list of links and total count.</returns>
+    Task<(List<ShortLink> Items, int TotalCount)> ListByUserAsync(
+        Guid userId,
+        int page,
+        int pageSize,
+        Pathy.Domain.Enums.LinkStatus? status,
+        DateTimeOffset? createdFrom,
+        DateTimeOffset? createdTo,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates an existing short link.
+    /// </summary>
+    /// <param name="shortLink">ShortLink entity to update.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task UpdateAsync(ShortLink shortLink, CancellationToken cancellationToken = default);
 }

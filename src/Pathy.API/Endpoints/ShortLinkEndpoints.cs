@@ -29,6 +29,35 @@ public static class ShortLinkEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
+        group.MapGet("", ListUserLinksAsync)
+            .WithName("ListUserLinks")
+            .WithSummary("List user's short links")
+            .WithDescription("Returns a paginated list of links created by the authenticated user. Supports filtering by status and creation date.")
+            .Produces<PagedResponse<LinkListItemResponse>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .RequireAuthorization();
+
+        group.MapGet("{id:guid}", GetLinkByIdAsync)
+            .WithName("GetLinkById")
+            .WithSummary("Get link details")
+            .WithDescription("Returns detailed information about a specific link. Only the owner can view the link.")
+            .Produces<LinkDetailResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequireAuthorization();
+
+        group.MapPatch("{id:guid}", UpdateLinkAsync)
+            .WithName("UpdateLink")
+            .WithSummary("Update link details")
+            .WithDescription("Updates the destination URL and/or expiration date of a link. Only the owner can update the link. " +
+                           "All changes are logged for audit purposes.")
+            .Produces<LinkDetailResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequireAuthorization();
+
         // GET /{slug} endpoint - redirect to original URL
         app.MapGet("/{slug}", GetShortLinkAsync)
             .WithName("GetShortLink")
@@ -73,5 +102,33 @@ public static class ShortLinkEndpoints
 
         // Otherwise, redirect to the original URL
         return Results.Redirect(response.OriginalUrl!);
+    }
+
+    private static async Task<IResult> ListUserLinksAsync(
+        [AsParameters] ListLinksRequest request,
+        ListUserLinksUseCase useCase,
+        CancellationToken cancellationToken)
+    {
+        var response = await useCase.ExecuteAsync(request, cancellationToken);
+        return Results.Ok(response);
+    }
+
+    private static async Task<IResult> GetLinkByIdAsync(
+        Guid id,
+        GetLinkByIdUseCase useCase,
+        CancellationToken cancellationToken)
+    {
+        var response = await useCase.ExecuteAsync(id, cancellationToken);
+        return Results.Ok(response);
+    }
+
+    private static async Task<IResult> UpdateLinkAsync(
+        Guid id,
+        UpdateLinkRequest request,
+        UpdateLinkUseCase useCase,
+        CancellationToken cancellationToken)
+    {
+        var response = await useCase.ExecuteAsync(id, request, cancellationToken);
+        return Results.Ok(response);
     }
 }

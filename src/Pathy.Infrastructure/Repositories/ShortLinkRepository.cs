@@ -70,4 +70,66 @@ public sealed class ShortLinkRepository : IShortLinkRepository
     {
         await _context.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task<ShortLink?> FindByIdAndUserAsync(
+        Guid id,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.ShortLinks
+            .Where(link => link.Id == id && link.UserId == userId)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<(List<ShortLink> Items, int TotalCount)> ListByUserAsync(
+        Guid userId,
+        int page,
+        int pageSize,
+        Domain.Enums.LinkStatus? status,
+        DateTimeOffset? createdFrom,
+        DateTimeOffset? createdTo,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.ShortLinks
+            .Where(link => link.UserId == userId);
+
+        // Apply status filter
+        if (status.HasValue)
+        {
+            query = query.Where(link => link.Status == status.Value);
+        }
+
+        // Apply date range filters
+        if (createdFrom.HasValue)
+        {
+            query = query.Where(link => link.CreatedAt >= createdFrom.Value);
+        }
+
+        if (createdTo.HasValue)
+        {
+            // Include the entire day of createdTo
+            var endOfDay = createdTo.Value.Date.AddDays(1);
+            query = query.Where(link => link.CreatedAt < endOfDay);
+        }
+
+        // Get total count
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        // Apply pagination
+        var items = await query
+            .OrderByDescending(link => link.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
+
+    public async Task UpdateAsync(
+        ShortLink shortLink,
+        CancellationToken cancellationToken = default)
+    {
+        _context.ShortLinks.Update(shortLink);
+        await Task.CompletedTask;
+    }
 }

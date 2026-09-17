@@ -55,6 +55,7 @@ public static class DependencyInjection
     private static IServiceCollection AddRepositories(this IServiceCollection services)
     {
         services.AddScoped<IShortLinkRepository, ShortLinkRepository>();
+        services.AddScoped<ILinkAuditLogRepository, LinkAuditLogRepository>();
         return services;
     }
 
@@ -62,6 +63,9 @@ public static class DependencyInjection
     {
         services.AddScoped<CreateShortLinkUseCase>();
         services.AddScoped<GetShortLinkUseCase>();
+        services.AddScoped<ListUserLinksUseCase>();
+        services.AddScoped<GetLinkByIdUseCase>();
+        services.AddScoped<UpdateLinkUseCase>();
         return services;
     }
 }
