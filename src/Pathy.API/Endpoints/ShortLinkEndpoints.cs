@@ -1,5 +1,6 @@
 using Pathy.Application.ShortLinks.Dtos;
 using Pathy.Application.ShortLinks.UseCases;
+using QuickJwt.AspNetCore;
 
 namespace Pathy.API.Endpoints;
 
@@ -36,7 +37,8 @@ public static class ShortLinkEndpoints
             .Produces<PagedResponse<LinkListItemResponse>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .RequireAuthorization();
+            .AddEndpointFilter<JwtEndpointFilter>();
+            
 
         group.MapGet("{id:guid}", GetLinkByIdAsync)
             .WithName("GetLinkById")
@@ -45,7 +47,7 @@ public static class ShortLinkEndpoints
             .Produces<LinkDetailResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequireAuthorization();
+            .AddEndpointFilter<JwtEndpointFilter>();
 
         group.MapPatch("{id:guid}", UpdateLinkAsync)
             .WithName("UpdateLink")
@@ -56,7 +58,7 @@ public static class ShortLinkEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequireAuthorization();
+            .AddEndpointFilter<JwtEndpointFilter>();
 
         // GET /{slug} endpoint - redirect to original URL
         app.MapGet("/{slug}", GetShortLinkAsync)

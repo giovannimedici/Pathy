@@ -12,8 +12,6 @@ public static class Extensions
         services.AddInfrastructure(configuration);
         services.AddEndpointsApiExplorer();
         services.AddSwagger();
-        services.AddAuthentication();
-        services.AddAuthorization();
         return services;
     }
 
@@ -40,8 +38,6 @@ public static class Extensions
         app.UseHttpsRedirection();
         app.MapEndpoints();
         app.UseMiddleware<ExceptionHandlingMiddleware>();
-        app.UseAuthentication();
-        app.UseAuthorization();
         return app;
     }
 
