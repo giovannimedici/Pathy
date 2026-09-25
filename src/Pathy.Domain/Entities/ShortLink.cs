@@ -20,6 +20,11 @@ public sealed class ShortLink
     public LinkStatus Status { get; private set; }
 
     /// <summary>
+    /// Date and time when the link was deactivated (soft deleted). Null if active.
+    /// </summary>
+    public DateTimeOffset? DeactivatedAt { get; private set; }
+
+    /// <summary>
     /// User ID that created the link. Null for anonymous users.
     /// </summary>
     public Guid? UserId { get; private set; }
@@ -94,5 +99,23 @@ public sealed class ShortLink
         ExpiresAt = newExpiresAt;
     }
 
-    // TODO: When soft delete is implemented, add validation to prevent editing inactive links
+    /// <summary>
+    /// Deactivates the link (soft delete).
+    /// </summary>
+    /// <exception cref="DomainException">Thrown if link is already inactive.</exception>
+    public void Deactivate()
+    {
+        if (Status == LinkStatus.Inactive)
+        {
+            throw new DomainException("Link is already inactive.");
+        }
+
+        Status = LinkStatus.Inactive;
+        DeactivatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Checks if the link is currently inactive (soft deleted).
+    /// </summary>
+    public bool IsInactive => Status == LinkStatus.Inactive;
 }

@@ -90,4 +90,12 @@ public interface IShortLinkRepository
     /// <param name="shortLink">ShortLink entity to update.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task UpdateAsync(ShortLink shortLink, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Permanently deletes a short link and all related data (cascade delete).
+    /// This operation is irreversible and complies with LGPD/GDPR "right to be forgotten".
+    /// </summary>
+    /// <param name="shortLink">ShortLink entity to delete.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task DeleteAsync(ShortLink shortLink, CancellationToken cancellationToken = default);
 }

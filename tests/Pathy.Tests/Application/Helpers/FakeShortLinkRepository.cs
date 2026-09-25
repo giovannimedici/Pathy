@@ -108,4 +108,10 @@ internal sealed class FakeShortLinkRepository : IShortLinkRepository
         // No need to do anything in memory, changes are already reflected
         return Task.CompletedTask;
     }
+
+    public Task DeleteAsync(ShortLink shortLink, CancellationToken cancellationToken = default)
+    {
+        _links.Remove(shortLink);
+        return Task.CompletedTask;
+    }
 }

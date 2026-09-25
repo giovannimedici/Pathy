@@ -48,6 +48,9 @@ public class ShortLinkConfiguration : IEntityTypeConfiguration<ShortLink>
             .HasColumnName("password_hash")
             .HasMaxLength(256);
 
+        builder.Property(x => x.DeactivatedAt)
+            .HasColumnName("deactivated_at");
+
         // Unique index on slug for fast lookups during redirect
         builder.HasIndex(x => x.Slug)
             .IsUnique()

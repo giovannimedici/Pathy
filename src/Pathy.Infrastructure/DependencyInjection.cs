@@ -66,6 +66,8 @@ public static class DependencyInjection
         services.AddScoped<ListUserLinksUseCase>();
         services.AddScoped<GetLinkByIdUseCase>();
         services.AddScoped<UpdateLinkUseCase>();
+        services.AddScoped<DeactivateLinkUseCase>();
+        services.AddScoped<HardDeleteLinkUseCase>();
         return services;
     }
 }

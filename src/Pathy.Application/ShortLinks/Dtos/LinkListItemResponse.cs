@@ -41,6 +41,11 @@ public sealed record LinkListItemResponse
     public DateTimeOffset? ExpiresAt { get; init; }
 
     /// <summary>
+    /// Deactivation timestamp (nullable). Set when the link is soft deleted.
+    /// </summary>
+    public DateTimeOffset? DeactivatedAt { get; init; }
+
+    /// <summary>
     /// Indicates if the link is password-protected.
     /// </summary>
     public required bool IsPasswordProtected { get; init; }

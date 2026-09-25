@@ -61,11 +61,11 @@ public sealed class UpdateLinkUseCase
             throw new NotFoundException($"Link with ID '{id}' not found.");
         }
 
-        // TODO: When soft delete is implemented, validate that link is not inactive
-        // if (link.Status == LinkStatus.Inactive)
-        // {
-        //     throw new DomainException("Cannot update an inactive link.");
-        // }
+        // Prevent editing inactive (soft deleted) links
+        if (link.IsInactive)
+        {
+            throw new DomainException("Cannot update an inactive link.");
+        }
 
         var auditLogs = new List<LinkAuditLog>();
 
@@ -145,6 +145,7 @@ public sealed class UpdateLinkUseCase
             Status = shortLink.Status.ToString().ToLower(),
             CreatedAt = shortLink.CreatedAt,
             ExpiresAt = shortLink.ExpiresAt,
+            DeactivatedAt = shortLink.DeactivatedAt,
             IsPasswordProtected = shortLink.IsPasswordProtected
         };
     }

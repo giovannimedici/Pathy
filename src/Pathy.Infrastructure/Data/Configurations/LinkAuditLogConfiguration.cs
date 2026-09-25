@@ -43,6 +43,12 @@ public class LinkAuditLogConfiguration : IEntityTypeConfiguration<LinkAuditLog>
             .HasColumnName("changed_at")
             .IsRequired();
 
+        // Relationship with ShortLink - cascade delete for LGPD/GDPR compliance
+        builder.HasOne<ShortLink>()
+            .WithMany()
+            .HasForeignKey(x => x.LinkId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         // Index on link_id for querying audit history of a specific link
         builder.HasIndex(x => x.LinkId)
             .HasDatabaseName("ix_link_audit_logs_link_id");

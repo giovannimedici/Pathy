@@ -60,6 +60,28 @@ public static class ShortLinkEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .AddEndpointFilter<JwtEndpointFilter>();
 
+        group.MapPost("{id:guid}/deactivate", DeactivateLinkAsync)
+            .WithName("DeactivateLink")
+            .WithSummary("Deactivate a link (soft delete)")
+            .WithDescription("Deactivates a link, making it unavailable for redirects. The link and its history are preserved. " +
+                           "Only the owner can deactivate the link. This action is logged for audit purposes.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .AddEndpointFilter<JwtEndpointFilter>();
+
+        group.MapDelete("{id:guid}", HardDeleteLinkAsync)
+            .WithName("HardDeleteLink")
+            .WithSummary("Permanently delete a link (hard delete)")
+            .WithDescription("Permanently deletes a link and all related data including click history and audit logs. " +
+                           "This operation is irreversible and complies with LGPD/GDPR 'right to be forgotten'. " +
+                           "Only the owner can delete the link.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .AddEndpointFilter<JwtEndpointFilter>();
+
         // GET /{slug} endpoint - redirect to original URL
         app.MapGet("/{slug}", GetShortLinkAsync)
             .WithName("GetShortLink")
@@ -132,5 +154,23 @@ public static class ShortLinkEndpoints
     {
         var response = await useCase.ExecuteAsync(id, request, cancellationToken);
         return Results.Ok(response);
+    }
+
+    private static async Task<IResult> DeactivateLinkAsync(
+        Guid id,
+        DeactivateLinkUseCase useCase,
+        CancellationToken cancellationToken)
+    {
+        await useCase.ExecuteAsync(id, cancellationToken);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HardDeleteLinkAsync(
+        Guid id,
+        HardDeleteLinkUseCase useCase,
+        CancellationToken cancellationToken)
+    {
+        await useCase.ExecuteAsync(id, cancellationToken);
+        return Results.NoContent();
     }
 }

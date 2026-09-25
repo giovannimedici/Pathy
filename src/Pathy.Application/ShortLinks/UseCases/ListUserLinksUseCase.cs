@@ -128,6 +128,7 @@ public sealed class ListUserLinksUseCase
             Status = shortLink.Status.ToString().ToLower(),
             CreatedAt = shortLink.CreatedAt,
             ExpiresAt = shortLink.ExpiresAt,
+            DeactivatedAt = shortLink.DeactivatedAt,
             IsPasswordProtected = shortLink.IsPasswordProtected
         };
     }

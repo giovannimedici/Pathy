@@ -132,4 +132,14 @@ public sealed class ShortLinkRepository : IShortLinkRepository
         _context.ShortLinks.Update(shortLink);
         await Task.CompletedTask;
     }
+
+    public async Task DeleteAsync(
+        ShortLink shortLink,
+        CancellationToken cancellationToken = default)
+    {
+        // Cascade delete is configured in EF Core for related entities (audit logs, clicks)
+        // This ensures LGPD/GDPR compliance with "right to be forgotten"
+        _context.ShortLinks.Remove(shortLink);
+        await Task.CompletedTask;
+    }
 }
