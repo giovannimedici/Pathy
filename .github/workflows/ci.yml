@@ -42,35 +42,63 @@ jobs:
             -targetdir:"./coverage/report" \
             -reporttypes:"Cobertura;TextSummary"
 
-      - name: Verify Endpoints coverage (min 70%)
+      - name: Verify Endpoints coverage per class (min 70%)
         run: |
-          COVERAGE=$(grep -A1 'Pathy\.API\.Endpoints' ./coverage/report/Cobertura.xml | grep -oP 'line-rate="\K[0-9.]+' | head -1)
-          if [ -z "$COVERAGE" ]; then
-            echo "::error::Could not find coverage data for Pathy.API.Endpoints namespace"
+          echo "Checking coverage for each Endpoints class..."
+          FAILED=0
+          
+          # Extract all classes matching Pathy.API.Endpoints.* and their line-rate
+          while IFS= read -r line; do
+            CLASS_NAME=$(echo "$line" | grep -oP 'name="\K[^"]+')
+            LINE_RATE=$(echo "$line" | grep -oP 'line-rate="\K[0-9.]+')
+            
+            if [[ "$CLASS_NAME" == Pathy.API.Endpoints.* ]]; then
+              COVERAGE_PCT=$(echo "$LINE_RATE * 100" | bc)
+              SHORT_NAME="${CLASS_NAME##*.}"
+              
+              if (( $(echo "$COVERAGE_PCT < 70" | bc -l) )); then
+                echo "::error::❌ ${SHORT_NAME}: ${COVERAGE_PCT}% (below 70%)"
+                FAILED=1
+              else
+                echo "✅ ${SHORT_NAME}: ${COVERAGE_PCT}%"
+              fi
+            fi
+          done < <(grep -E '<class[^>]+name="Pathy\.API\.Endpoints\.' ./coverage/report/Cobertura.xml)
+          
+          if [ "$FAILED" -eq 1 ]; then
+            echo "::error::One or more Endpoints classes are below the 70% coverage threshold"
             exit 1
           fi
-          COVERAGE_PCT=$(echo "$COVERAGE * 100" | bc)
-          echo "Endpoints line coverage: ${COVERAGE_PCT}%"
-          if (( $(echo "$COVERAGE_PCT < 70" | bc -l) )); then
-            echo "::error::Endpoints coverage ${COVERAGE_PCT}% is below the required 70%"
-            exit 1
-          fi
-          echo "✅ Endpoints coverage ${COVERAGE_PCT}% meets the 70% threshold"
+          echo "All Endpoints classes meet the 70% coverage threshold"
 
-      - name: Verify UseCases coverage (min 70%)
+      - name: Verify UseCases coverage per class (min 70%)
         run: |
-          COVERAGE=$(grep -A1 'Pathy\.Application\.ShortLinks\.UseCases' ./coverage/report/Cobertura.xml | grep -oP 'line-rate="\K[0-9.]+' | head -1)
-          if [ -z "$COVERAGE" ]; then
-            echo "::error::Could not find coverage data for Pathy.Application.ShortLinks.UseCases namespace"
+          echo "Checking coverage for each UseCase class..."
+          FAILED=0
+          
+          # Extract all classes matching *UseCase and their line-rate
+          while IFS= read -r line; do
+            CLASS_NAME=$(echo "$line" | grep -oP 'name="\K[^"]+')
+            LINE_RATE=$(echo "$line" | grep -oP 'line-rate="\K[0-9.]+')
+            
+            if [[ "$CLASS_NAME" == Pathy.Application.ShortLinks.UseCases.*UseCase ]]; then
+              COVERAGE_PCT=$(echo "$LINE_RATE * 100" | bc)
+              SHORT_NAME="${CLASS_NAME##*.}"
+              
+              if (( $(echo "$COVERAGE_PCT < 70" | bc -l) )); then
+                echo "::error::❌ ${SHORT_NAME}: ${COVERAGE_PCT}% (below 70%)"
+                FAILED=1
+              else
+                echo "✅ ${SHORT_NAME}: ${COVERAGE_PCT}%"
+              fi
+            fi
+          done < <(grep -E '<class[^>]+name="Pathy\.Application\.ShortLinks\.UseCases\.[^"]*UseCase"' ./coverage/report/Cobertura.xml)
+          
+          if [ "$FAILED" -eq 1 ]; then
+            echo "::error::One or more UseCase classes are below the 70% coverage threshold"
             exit 1
           fi
-          COVERAGE_PCT=$(echo "$COVERAGE * 100" | bc)
-          echo "UseCases line coverage: ${COVERAGE_PCT}%"
-          if (( $(echo "$COVERAGE_PCT < 70" | bc -l) )); then
-            echo "::error::UseCases coverage ${COVERAGE_PCT}% is below the required 70%"
-            exit 1
-          fi
-          echo "✅ UseCases coverage ${COVERAGE_PCT}% meets the 70% threshold"
+          echo "All UseCase classes meet the 70% coverage threshold"
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
