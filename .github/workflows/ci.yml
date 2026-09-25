@@ -45,59 +45,85 @@ jobs:
       - name: Verify Endpoints coverage per class (min 70%)
         run: |
           echo "Checking coverage for each Endpoints class..."
-          FAILED=0
           
-          # Extract all classes matching Pathy.API.Endpoints.* and their line-rate
-          while IFS= read -r line; do
-            CLASS_NAME=$(echo "$line" | grep -oP 'name="\K[^"]+')
-            LINE_RATE=$(echo "$line" | grep -oP 'line-rate="\K[0-9.]+')
+          # Parse Cobertura.xml for Endpoints classes and save to temp file
+          rm -f /tmp/endpoints_coverage.txt /tmp/endpoints_failed.txt
+          grep '<class name="Pathy\.API\.Endpoints\.' ./coverage/report/Cobertura.xml | while read -r line; do
+            CLASS_NAME=$(echo "$line" | sed -n 's/.*<class name="\([^"]*\)".*/\1/p')
+            LINE_RATE=$(echo "$line" | awk -F'line-rate="' '{print $2}' | awk -F'"' '{print $1}')
             
-            if [[ "$CLASS_NAME" == Pathy.API.Endpoints.* ]]; then
-              COVERAGE_PCT=$(echo "$LINE_RATE * 100" | bc)
+            if [ -n "$CLASS_NAME" ] && [ -n "$LINE_RATE" ]; then
+              COVERAGE_PCT=$(awk "BEGIN {printf \"%.1f\", $LINE_RATE * 100}")
               SHORT_NAME="${CLASS_NAME##*.}"
-              
-              if (( $(echo "$COVERAGE_PCT < 70" | bc -l) )); then
-                echo "::error::❌ ${SHORT_NAME}: ${COVERAGE_PCT}% (below 70%)"
-                FAILED=1
-              else
-                echo "✅ ${SHORT_NAME}: ${COVERAGE_PCT}%"
-              fi
+              echo "${SHORT_NAME}:${COVERAGE_PCT}" >> /tmp/endpoints_coverage.txt
             fi
-          done < <(grep -E '<class[^>]+name="Pathy\.API\.Endpoints\.' ./coverage/report/Cobertura.xml)
+          done
           
-          if [ "$FAILED" -eq 1 ]; then
+          if [ ! -f /tmp/endpoints_coverage.txt ]; then
+            echo "::error::No Endpoints classes found in coverage report"
+            exit 1
+          fi
+          
+          echo "=== Endpoints Coverage Results ==="
+          while IFS=: read -r NAME PCT; do
+            BELOW=$(awk "BEGIN {print ($PCT < 70) ? 1 : 0}")
+            if [ "$BELOW" -eq 1 ]; then
+              echo "::error::❌ ${NAME}: ${PCT}% (below 70%)"
+              echo "FAILED" >> /tmp/endpoints_failed.txt
+            else
+              echo "✅ ${NAME}: ${PCT}%"
+            fi
+          done < /tmp/endpoints_coverage.txt
+          
+          if [ -f /tmp/endpoints_failed.txt ]; then
+            rm -f /tmp/endpoints_coverage.txt /tmp/endpoints_failed.txt
             echo "::error::One or more Endpoints classes are below the 70% coverage threshold"
             exit 1
           fi
+          
+          rm -f /tmp/endpoints_coverage.txt
           echo "All Endpoints classes meet the 70% coverage threshold"
 
       - name: Verify UseCases coverage per class (min 70%)
         run: |
           echo "Checking coverage for each UseCase class..."
-          FAILED=0
           
-          # Extract all classes matching *UseCase and their line-rate
-          while IFS= read -r line; do
-            CLASS_NAME=$(echo "$line" | grep -oP 'name="\K[^"]+')
-            LINE_RATE=$(echo "$line" | grep -oP 'line-rate="\K[0-9.]+')
+          # Parse Cobertura.xml for UseCase classes and save to temp file
+          rm -f /tmp/usecases_coverage.txt /tmp/usecases_failed.txt
+          grep '<class name="Pathy\.Application\.ShortLinks\.UseCases\.' ./coverage/report/Cobertura.xml | grep 'UseCase"' | while read -r line; do
+            CLASS_NAME=$(echo "$line" | sed -n 's/.*<class name="\([^"]*\)".*/\1/p')
+            LINE_RATE=$(echo "$line" | awk -F'line-rate="' '{print $2}' | awk -F'"' '{print $1}')
             
-            if [[ "$CLASS_NAME" == Pathy.Application.ShortLinks.UseCases.*UseCase ]]; then
-              COVERAGE_PCT=$(echo "$LINE_RATE * 100" | bc)
+            if [ -n "$CLASS_NAME" ] && [ -n "$LINE_RATE" ]; then
+              COVERAGE_PCT=$(awk "BEGIN {printf \"%.1f\", $LINE_RATE * 100}")
               SHORT_NAME="${CLASS_NAME##*.}"
-              
-              if (( $(echo "$COVERAGE_PCT < 70" | bc -l) )); then
-                echo "::error::❌ ${SHORT_NAME}: ${COVERAGE_PCT}% (below 70%)"
-                FAILED=1
-              else
-                echo "✅ ${SHORT_NAME}: ${COVERAGE_PCT}%"
-              fi
+              echo "${SHORT_NAME}:${COVERAGE_PCT}" >> /tmp/usecases_coverage.txt
             fi
-          done < <(grep -E '<class[^>]+name="Pathy\.Application\.ShortLinks\.UseCases\.[^"]*UseCase"' ./coverage/report/Cobertura.xml)
+          done
           
-          if [ "$FAILED" -eq 1 ]; then
+          if [ ! -f /tmp/usecases_coverage.txt ]; then
+            echo "::error::No UseCase classes found in coverage report"
+            exit 1
+          fi
+          
+          echo "=== UseCases Coverage Results ==="
+          while IFS=: read -r NAME PCT; do
+            BELOW=$(awk "BEGIN {print ($PCT < 70) ? 1 : 0}")
+            if [ "$BELOW" -eq 1 ]; then
+              echo "::error::❌ ${NAME}: ${PCT}% (below 70%)"
+              echo "FAILED" >> /tmp/usecases_failed.txt
+            else
+              echo "✅ ${NAME}: ${PCT}%"
+            fi
+          done < /tmp/usecases_coverage.txt
+          
+          if [ -f /tmp/usecases_failed.txt ]; then
+            rm -f /tmp/usecases_coverage.txt /tmp/usecases_failed.txt
             echo "::error::One or more UseCase classes are below the 70% coverage threshold"
             exit 1
           fi
+          
+          rm -f /tmp/usecases_coverage.txt
           echo "All UseCase classes meet the 70% coverage threshold"
 
       - name: Upload coverage report
