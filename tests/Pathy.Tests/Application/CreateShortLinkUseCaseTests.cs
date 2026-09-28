@@ -170,4 +170,29 @@ public class CreateShortLinkUseCaseTests
         Assert.True(isNew);
         Assert.Equal(expiresAt, response.ExpiresAt);
     }
+
+    [Theory]
+    [InlineData("links")]
+    [InlineData("auth")]
+    [InlineData("swagger")]
+    [InlineData("LINKS")] // case-insensitive
+    public async Task ExecuteAsync_WithReservedCustomSlug_ThrowsDomainException(string reservedSlug)
+    {
+        var userId = Guid.NewGuid();
+        var repository = new FakeShortLinkRepository();
+        var useCase = new CreateShortLinkUseCase(
+            repository,
+            HttpContextTestHelper.Create(userId: userId));
+
+        var request = new CreateShortLinkRequest
+        {
+            Url = "https://example.com/page",
+            CustomSlug = reservedSlug
+        };
+
+        var exception = await Assert.ThrowsAsync<DomainException>(
+            () => useCase.ExecuteAsync(request));
+
+        Assert.Contains("reserved", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
 }

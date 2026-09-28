@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.DependencyInjection;
 using Pathy.Application.ShortLinks.Dtos;
 using Pathy.Domain.Entities;
@@ -195,8 +196,7 @@ public class GetShortLinkEndpointTests : IClassFixture<PathyWebApplicationFactor
 
         // Create the entity directly without using the factory method
         // to bypass the "expiration must be in the future" validation
-        var shortLink = (ShortLink)System.Runtime.Serialization.FormatterServices
-            .GetUninitializedObject(typeof(ShortLink));
+        var shortLink = (ShortLink)RuntimeHelpers.GetUninitializedObject(typeof(ShortLink));
 
         // Use reflection to set all properties
         typeof(ShortLink).GetProperty("Id")!.SetValue(shortLink, Guid.NewGuid());

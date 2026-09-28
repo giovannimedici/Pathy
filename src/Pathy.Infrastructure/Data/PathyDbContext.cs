@@ -13,6 +13,8 @@ public class PathyDbContext : DbContext
     }
 
     public DbSet<ShortLink> ShortLinks => Set<ShortLink>();
+    
+    public DbSet<LinkAuditLog> LinkAuditLogs => Set<LinkAuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

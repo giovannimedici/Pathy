@@ -71,6 +71,20 @@ public class SlugRulesTests
     {
         Assert.Throws<DomainException>(() => SlugRules.Validate(slug));
     }
+
+    [Theory]
+    [InlineData("links")]
+    [InlineData("auth")]
+    [InlineData("swagger")]
+    [InlineData("api")]
+    [InlineData("LINKS")] // case-insensitive
+    [InlineData("Auth")] // case-insensitive
+    public void Validate_RejectsReservedSlugs(string slug)
+    {
+        var exception = Assert.Throws<DomainException>(() => SlugRules.Validate(slug));
+        
+        Assert.Contains("reserved", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 public class UrlRulesTests

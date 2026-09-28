@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pathy.Infrastructure.Data;
@@ -11,9 +12,11 @@ using Pathy.Infrastructure.Data;
 namespace Pathy.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(PathyDbContext))]
-    partial class PathyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260917102750_AddLinkAuditLog")]
+    partial class AddLinkAuditLog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -82,10 +85,6 @@ namespace Pathy.Infrastructure.Data.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<DateTimeOffset?>("DeactivatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deactivated_at");
-
                     b.Property<DateTimeOffset?>("ExpiresAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expires_at");
@@ -130,15 +129,6 @@ namespace Pathy.Infrastructure.Data.Migrations
                         .HasDatabaseName("ix_short_links_user_url");
 
                     b.ToTable("short_links", (string)null);
-                });
-
-            modelBuilder.Entity("Pathy.Domain.Entities.LinkAuditLog", b =>
-                {
-                    b.HasOne("Pathy.Domain.Entities.ShortLink", null)
-                        .WithMany()
-                        .HasForeignKey("LinkId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

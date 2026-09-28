@@ -1,5 +1,6 @@
 using Microsoft.OpenApi.Models;
 using Pathy.API.Endpoints;
+using Pathy.API.Middlewares;
 using Pathy.Infrastructure;
 
 namespace Pathy.API.Configurations;
@@ -12,6 +13,7 @@ public static class Extensions
         services.AddInfrastructure(configuration);
         services.AddEndpointsApiExplorer();
         services.AddSwagger();
+        services.AddRateLimiting(configuration);
         return services;
     }
 
@@ -36,9 +38,13 @@ public static class Extensions
             app.UseSwaggerUI();
         }
         app.UseHttpsRedirection();
+        
+        // Rate limiting middleware (must be before endpoints)
+        app.UseRateLimitingMiddleware();
+        app.UseRateLimitHeaders();
+        
         app.MapEndpoints();
         app.UseMiddleware<ExceptionHandlingMiddleware>();
-        
         return app;
     }
 

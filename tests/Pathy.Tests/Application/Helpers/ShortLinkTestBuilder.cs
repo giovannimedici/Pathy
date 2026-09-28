@@ -1,4 +1,4 @@
-using System.Runtime.Serialization;
+using System.Runtime.CompilerServices;
 using Pathy.Domain.Entities;
 using Pathy.Domain.Enums;
 
@@ -33,7 +33,7 @@ internal static class ShortLinkTestBuilder
 
     public static ShortLink CreateExpired(string slug, string originalUrl, DateTimeOffset expiresAt)
     {
-        var link = (ShortLink)FormatterServices.GetUninitializedObject(typeof(ShortLink));
+        var link = (ShortLink)RuntimeHelpers.GetUninitializedObject(typeof(ShortLink));
 
         SetProperty(link, "Id", Guid.NewGuid());
         SetProperty(link, "OriginalUrl", originalUrl);
