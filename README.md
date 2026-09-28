@@ -4,24 +4,26 @@ URL shortener focused on reliability, analytics, and scale.
 
 ## Current status
 
-Week 1 (core shorten and redirect) is complete. The API supports creating short links
-and redirecting visitors to the original URL, with standardized error responses.
+Weeks 1 and 2 are complete. The API supports creating short links, redirecting visitors,
+full link management, and JWT authentication with rate limiting.
 
 | Feature | Status |
 |---|---|
-| Create short links (`POST /links`) | Done |
-| Redirect to original URL (`GET /{slug}`) | Done |
-| Base62 slug generation (6–8 chars, cryptographically secure) | Done |
-| URL validation and SSRF prevention | Done |
-| Custom slugs, expiration, password protection (authenticated) | Done |
-| Idempotency for authenticated users | Done |
-| RFC 7807 Problem Details error responses | Done |
-| EF Core + PostgreSQL persistence | Done |
-| Unit and integration tests | Done |
-| CI pipeline (GitHub Actions) | Done |
-| JWT authentication | Planned (Week 2) |
-| Link management (list, edit, delete) | Planned (Week 2) |
-| Click analytics (async via queue) | Planned (Week 4) |
+| Create short links (`POST /links`) | ✅ Done |
+| Redirect to original URL (`GET /{slug}`) | ✅ Done |
+| Base62 slug generation (6–8 chars, cryptographically secure) | ✅ Done |
+| URL validation and SSRF prevention | ✅ Done |
+| Custom slugs, expiration, password protection (authenticated) | ✅ Done |
+| Idempotency for authenticated users | ✅ Done |
+| RFC 7807 Problem Details error responses | ✅ Done |
+| EF Core + PostgreSQL persistence | ✅ Done |
+| Unit and integration tests | ✅ Done |
+| CI pipeline (GitHub Actions) | ✅ Done |
+| JWT authentication | ✅ Done |
+| Link management (list, edit, delete) | ✅ Done |
+| Rate limiting (by IP/user) | ✅ Done |
+| Audit logging for link changes | ✅ Done |
+| Click analytics (async via queue) | 📅 Planned (Week 4) |
 
 ## Architecture
 
@@ -63,6 +65,80 @@ All URLs are validated before a link is created:
 - `localhost` and private/internal IP addresses are blocked (SSRF prevention)
 - Slugs must be 6–8 Base62 characters
 
+## Authentication
+
+The API uses JWT (JSON Web Tokens) for authentication via the [QuickJwt](https://github.com/quickjwt/quickjwt-dotnet)
+library. Include the token in the `Authorization` header:
+
+```
+Authorization: Bearer <your-token>
+```
+
+**Authenticated endpoints:**
+
+| Endpoint | Description |
+|---|---|
+| `GET /links` | List user's links |
+| `GET /links/{id}` | Get link details |
+| `PATCH /links/{id}` | Update link |
+| `POST /links/{id}/deactivate` | Soft delete |
+| `DELETE /links/{id}` | Hard delete |
+
+**Mixed endpoints:**
+
+| Endpoint | Anonymous | Authenticated |
+|---|---|---|
+| `POST /links` | Basic links only | Custom slug, expiration, password |
+| `GET /{slug}` | Redirect | Redirect |
+
+JWT configuration is set via `appsettings.json` or environment variables.
+
+## Rate limiting
+
+The API uses ASP.NET Core's native rate limiter with different limits based on
+authentication status:
+
+| User type | Limit | Window | Partition key |
+|---|---|---|---|
+| Anonymous | 10 requests | 1 minute | IP address |
+| Authenticated | 100 requests | 1 minute | User ID |
+
+When rate limited, the API returns `429 Too Many Requests` with RFC 7807 Problem Details
+and a `Retry-After` header indicating when to retry.
+
+**Rate limit headers** are included in every response:
+
+| Header | Description |
+|---|---|
+| `X-RateLimit-Limit` | Maximum requests allowed in the window |
+| `X-RateLimit-Remaining` | Requests remaining in the current window |
+| `X-RateLimit-Reset` | Unix timestamp when the window resets |
+
+Rate limits are configurable via `appsettings.json`:
+
+```json
+{
+  "RateLimiting": {
+    "AnonymousPermitLimit": 10,
+    "AuthenticatedPermitLimit": 100
+  }
+}
+```
+
+## Audit logging
+
+All changes to link semantics (destination URL, expiration date, deactivation) are
+logged in an audit trail. Each audit entry records:
+
+- **Link ID** — which link was changed
+- **User ID** — who made the change
+- **Action** — what was done (`DestinationUrlChanged`, `ExpiresAtChanged`, `Deactivated`)
+- **Old/New values** — before and after (for URL and expiration changes)
+- **Timestamp** — when the change occurred
+- **IP address** — from where the change was made
+
+This ensures traceability for compliance and debugging purposes.
+
 ## Error handling
 
 All API errors follow [RFC 7807 Problem Details](https://tools.ietf.org/html/rfc7807).
@@ -72,9 +148,10 @@ The `ExceptionHandlingMiddleware` maps domain exceptions to HTTP status codes:
 |---|---|
 | 401 Unauthorized | Advanced features used without authentication, or password required |
 | 404 Not Found | Slug does not exist or link is deactivated |
-| 409 Conflict | Custom slug already in use |
+| 409 Conflict | Custom slug already in use, or link already deactivated |
 | 410 Gone | Link exists but has expired |
 | 422 Unprocessable Entity | Domain rule violation (e.g., invalid URL) |
+| 429 Too Many Requests | Rate limit exceeded |
 
 ## Getting started
 
@@ -126,6 +203,16 @@ dotnet run
 Swagger UI is available at `/swagger` in Development mode.
 
 ## API Endpoints
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `POST` | `/links` | Optional | Create short link |
+| `GET` | `/links` | Required | List user's links |
+| `GET` | `/links/{id}` | Required | Get link details |
+| `PATCH` | `/links/{id}` | Required | Update link |
+| `POST` | `/links/{id}/deactivate` | Required | Soft delete |
+| `DELETE` | `/links/{id}` | Required | Hard delete |
+| `GET` | `/{slug}` | — | Redirect to original URL |
 
 ### POST /links
 
@@ -236,18 +323,163 @@ curl https://your-domain.com/xyz999
 # → 404 Not Found: "Short link not found."
 ```
 
+### GET /links
+
+Lists the authenticated user's links with pagination and filtering.
+
+**Query parameters:**
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `page` | int | 1 | Page number (1-indexed) |
+| `pageSize` | int | 20 | Items per page (max 100) |
+| `status` | string | all | Filter by status: `active`, `inactive`, or `all` |
+| `fromDate` | DateTimeOffset | — | Filter links created after this date |
+| `toDate` | DateTimeOffset | — | Filter links created before this date |
+
+**Success response (200 OK):**
+
+```json
+{
+  "items": [
+    {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "slug": "abc123",
+      "shortUrl": "https://your-domain.com/abc123",
+      "originalUrl": "https://example.com/page",
+      "createdAt": "2026-09-15T10:00:00Z",
+      "expiresAt": null,
+      "status": "active",
+      "isPasswordProtected": false
+    }
+  ],
+  "page": 1,
+  "pageSize": 20,
+  "totalCount": 42,
+  "totalPages": 3,
+  "hasNextPage": true,
+  "hasPreviousPage": false
+}
+```
+
+**Error responses:**
+
+- **400 Bad Request** — Invalid query parameters
+- **401 Unauthorized** — Not authenticated
+
+### GET /links/{id}
+
+Returns detailed information about a specific link. Only the owner can view it.
+
+**Success response (200 OK):**
+
+```json
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "slug": "abc123",
+  "shortUrl": "https://your-domain.com/abc123",
+  "originalUrl": "https://example.com/page",
+  "createdAt": "2026-09-15T10:00:00Z",
+  "expiresAt": "2026-12-31T23:59:59Z",
+  "status": "active",
+  "deactivatedAt": null,
+  "isPasswordProtected": false
+}
+```
+
+**Error responses:**
+
+- **401 Unauthorized** — Not authenticated
+- **404 Not Found** — Link not found or belongs to another user
+
+### PATCH /links/{id}
+
+Updates the destination URL and/or expiration date of a link. Only the owner can
+update it. All changes are logged for audit purposes.
+
+**Request body:**
+
+```json
+{
+  "url": "https://example.com/new-destination",  // optional
+  "expiresAt": "2027-06-30T23:59:59Z"            // optional, null to remove
+}
+```
+
+**Success response (200 OK):** Same as GET /links/{id}
+
+**Error responses:**
+
+- **400 Bad Request** — Malformed request
+- **401 Unauthorized** — Not authenticated
+- **404 Not Found** — Link not found or belongs to another user
+- **422 Unprocessable Entity** — Invalid URL or expiration date in the past
+
+### POST /links/{id}/deactivate
+
+Deactivates a link (soft delete). The link becomes unavailable for redirects, but
+its history and audit logs are preserved. Only the owner can deactivate it.
+
+**Success response:**
+
+- **204 No Content** — Link deactivated
+
+**Error responses:**
+
+- **401 Unauthorized** — Not authenticated
+- **404 Not Found** — Link not found or belongs to another user
+- **409 Conflict** — Link is already inactive
+
+### DELETE /links/{id}
+
+Permanently deletes a link and all related data including click history and audit logs.
+This operation is irreversible and complies with LGPD/GDPR "right to be forgotten".
+Only the owner can delete it.
+
+**Success response:**
+
+- **204 No Content** — Link permanently deleted
+
+**Error responses:**
+
+- **401 Unauthorized** — Not authenticated
+- **404 Not Found** — Link not found or belongs to another user
+
 ## Testing
 
 The test suite covers three layers:
 
-- **Domain** — entity creation, slug/URL validation rules
-- **Application** — use case logic (create, get/redirect) with fake repositories
-- **Integration** — full HTTP request/response cycle via `WebApplicationFactory`
+- **Domain** — entity creation, slug/URL validation rules, state transitions
+- **Application** — use case logic with fake repositories:
+  - `CreateShortLinkUseCaseTests` — link creation, idempotency, validation
+  - `GetShortLinkUseCaseTests` — redirect, expiration, deactivation
+  - `ListUserLinksUseCaseTests` — pagination, filtering, ownership
+  - `GetLinkByIdUseCaseTests` — detail retrieval, ownership validation
+  - `UpdateLinkUseCaseTests` — URL/expiration updates, audit logging
+  - `DeactivateLinkUseCaseTests` — soft delete, already inactive handling
+  - `HardDeleteLinkUseCaseTests` — permanent deletion, ownership validation
+- **Integration** — full HTTP request/response cycle via `WebApplicationFactory`:
+  - `CreateShortLinkEndpointTests`
+  - `GetShortLinkEndpointTests`
+  - `ListUserLinksEndpointTests`
+  - `GetLinkByIdEndpointTests`
+  - `UpdateLinkEndpointTests`
+
+Integration tests use an in-memory database with rate limiting disabled for test isolation.
 
 ```bash
 dotnet test --verbosity normal
 ```
 
 ## Roadmap
+
+| Phase | Status |
+|---|---|
+| Week 1 — Core (shorten and redirect) | ✅ Complete |
+| Week 2 — Authentication and link management | ✅ Complete |
+| Week 3 — Deploying to AWS | 📅 Planned |
+| Week 4 — Asynchronous analytics | 📅 Planned |
+| Week 5 — React frontend | 📅 Planned |
+| Week 6 — Differentiators (optional) | 📅 Planned |
 
 See [docs/roadmap.md](docs/roadmap.md) for the full project plan.

@@ -1,3 +1,4 @@
+using Pathy.API.Configurations;
 using Pathy.Application.ShortLinks.Dtos;
 using Pathy.Application.ShortLinks.UseCases;
 using QuickJwt.AspNetCore;
@@ -28,7 +29,9 @@ public static class ShortLinkEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .RequireRateLimiting(RateLimitingConfiguration.AuthenticatedPolicy);
 
         group.MapGet("", ListUserLinksAsync)
             .WithName("ListUserLinks")
@@ -37,7 +40,9 @@ public static class ShortLinkEndpoints
             .Produces<PagedResponse<LinkListItemResponse>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .AddEndpointFilter<JwtEndpointFilter>();
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .AddEndpointFilter<JwtEndpointFilter>()
+            .RequireRateLimiting(RateLimitingConfiguration.AuthenticatedPolicy);
             
 
         group.MapGet("{id:guid}", GetLinkByIdAsync)
@@ -47,7 +52,9 @@ public static class ShortLinkEndpoints
             .Produces<LinkDetailResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .AddEndpointFilter<JwtEndpointFilter>();
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .AddEndpointFilter<JwtEndpointFilter>()
+            .RequireRateLimiting(RateLimitingConfiguration.AuthenticatedPolicy);
 
         group.MapPatch("{id:guid}", UpdateLinkAsync)
             .WithName("UpdateLink")
@@ -58,7 +65,9 @@ public static class ShortLinkEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .AddEndpointFilter<JwtEndpointFilter>();
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .AddEndpointFilter<JwtEndpointFilter>()
+            .RequireRateLimiting(RateLimitingConfiguration.AuthenticatedPolicy);
 
         group.MapPost("{id:guid}/deactivate", DeactivateLinkAsync)
             .WithName("DeactivateLink")
@@ -69,7 +78,9 @@ public static class ShortLinkEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .AddEndpointFilter<JwtEndpointFilter>();
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .AddEndpointFilter<JwtEndpointFilter>()
+            .RequireRateLimiting(RateLimitingConfiguration.AuthenticatedPolicy);
 
         group.MapDelete("{id:guid}", HardDeleteLinkAsync)
             .WithName("HardDeleteLink")
@@ -80,7 +91,9 @@ public static class ShortLinkEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .AddEndpointFilter<JwtEndpointFilter>();
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .AddEndpointFilter<JwtEndpointFilter>()
+            .RequireRateLimiting(RateLimitingConfiguration.AuthenticatedPolicy);
 
         // GET /{slug} endpoint - redirect to original URL
         app.MapGet("/{slug}", GetShortLinkAsync)
@@ -92,7 +105,9 @@ public static class ShortLinkEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status410Gone)
-            .WithOpenApi();
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .WithOpenApi()
+            .RequireRateLimiting(RateLimitingConfiguration.AnonymousPolicy);
     }
 
     private static async Task<IResult> CreateShortLinkAsync(
